@@ -41,7 +41,8 @@ export default function Home() {
     updatePantry()
   },[])
 
-  const addItem = async (item) => {
+  const addItem = async (e, item) => {
+    e.preventDefault();
     const docRef = doc(collection(firestore,'pantry'),item)
     const docSnap = await getDoc(docRef)
     if(docSnap.exists()){
