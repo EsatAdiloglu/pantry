@@ -122,9 +122,12 @@ export default function Home() {
                       }
                   </Typography>
                   <Typography variant={'h3'} color={'#333'} textAlign={"center"}>
-                      Quantity: {count}
+                      {count}
                   </Typography>
-                <Button variant="contained" onClick={() => removeItem(name)}>Delete</Button>
+                <Stack direction="row" spacing={2}>
+                  <Button variant="contained" onClick={() => addItem(name)}>Add</Button>
+                  <Button variant="contained" onClick={() => removeItem(name)}>Remove</Button>
+                </Stack>
               </Box>
             ))} 
         </Stack>
