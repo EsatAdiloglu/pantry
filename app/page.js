@@ -41,8 +41,7 @@ export default function Home() {
     updatePantry()
   },[])
 
-  const addItem = async (e, item) => {
-    e.preventDefault();
+  const addItem = async (item) => {
     const docRef = doc(collection(firestore,'pantry'),item)
     const docSnap = await getDoc(docRef)
     if(docSnap.exists()){
@@ -91,8 +90,8 @@ export default function Home() {
           <Stack width="100%" direction={'row'} spacing={2}>
             <TextField id="outlined-basic" label="Item" variant="outlined" fullWidth value={itemName} onChange={(e) => setitemName(e.target.value)}/>
             <Button variant="outlined"
-            onClick={() => {
-              addItem(itemName)
+            onClick={async () => {
+               await addItem(itemName)
               setitemName("")
               handleClose()
             }}>Add</Button>
