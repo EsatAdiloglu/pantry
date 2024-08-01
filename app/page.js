@@ -22,15 +22,15 @@ const style = {
 export default function Home() {
   const [pantry,setPantry] = useState([]);
   const [openData,setOpenData] = useState({
-    add: false,
-    more_add: false,
-    delete: false,
+    edit: false,
     find: false
   });
   const [itemData, setItemData] = useState({
     name: '',
     quantity: 1
   });
+  const [showAddItem, setShowAddItem] = useState(false);
+
   const handleOpen = (e) => setOpenData((prevState) => ({...prevState,[e.target.name]: true}))
   const handleClose = (name) => {
     setOpenData((prevState) => ({ ...prevState, [name]: false }));
@@ -49,7 +49,7 @@ export default function Home() {
     })
     setPantry(pantryList)
   }
-
+ 
 
   const addItem = async (item) => {
     try{
@@ -72,23 +72,23 @@ export default function Home() {
     console.error(error)
   }
   }
-  const removeItem = async (item) => {
-    const docRef = doc(collection(firestore,'pantry'),item.name)
+  const removeItem = async (name,quantity) => {
+    const docRef = doc(collection(firestore,'pantry'),name)
     const docSnap = await getDoc(docRef)
-    const quantity = Number(item.quantity)
-    if(quantity > 0){
+    quantity = Number(quantity)
+    if(!isNaN(quantity)){
       if (docSnap.exists()){
         const {count} = docSnap.data()
-        if (count - item.quantity < 1){
+        if (count - quantity < 1){
           await deleteDoc(docRef)
         }
         else{
-          await setDoc(docRef, {count: count - item.quantity})
+          await setDoc(docRef, {count: count - quantity})
         }
-      }
     }
-    await updatePantry()
   }
+    await updatePantry()
+} 
   return (
     <Box       
     width="100vw"
@@ -100,49 +100,18 @@ export default function Home() {
     gap={2}
    > 
 
-
-      {/*Add New Item Modal*/}
+      {/*Edit Modal*/}
       <Modal
-        open={openData.add}
-        onClose={() => handleClose('add')}
+        open={openData.edit}
+        onClose={() => handleClose('edit')}
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
       >
         <Box sx={style}>
           <Typography id="modal-modal-title" variant="h6" component="h2">
-            Add Item
+            How much would you like to add or remove for {itemData.name}?
           </Typography>
           <Stack width="100%" direction={'column'} spacing={2}>
-            <TextField id="outlined-basic"  label="Item" variant="outlined" fullWidth value={itemData.name} onChange={(e) => setItemData((prevState) => ({...prevState, name: e.target.value}))}/>
-            <TextField id="outlined-basic"  
-            type="number" 
-            label="Quantity" 
-            variant="outlined" 
-            fullWidth value={itemData.quantity} 
-            inputProps={{ min: 1 }}
-            onChange={(e) => setItemData((prevState) => ({...prevState, quantity: e.target.value}))}/>
-            <Button variant="outlined" name="add"
-            onClick={(e) => {
-              addItem(itemData)
-              setItemData({name:"", quantity:1})
-              handleClose("add")
-            }}>Add</Button>
-          </Stack>
-        </Box>
-      </Modal>
-
-      {/*More Add Modal*/}
-      <Modal
-        open={openData.more_add}
-        onClose={() => handleClose('more_add')}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
-        <Box sx={style}>
-          <Typography id="modal-modal-title" variant="h6" component="h2">
-            How much would you like to add for {itemData.name}?
-          </Typography>
-          <Stack width="100%" direction={'row'} spacing={2}>
             <TextField 
             id="outlined-basic"  
             type="number" 
@@ -151,88 +120,86 @@ export default function Home() {
             fullWidth value={itemData.quantity} 
             inputProps={{ min: 1 }}
             onChange={(e) => setItemData((prevState) => ({...prevState, quantity: e.target.value}))}/>
-            <Button variant="outlined" name="more_add"
-            onClick={(e) => {
+            <Stack width="100%" direction={"row"} spacing={2}>
+              <Button variant="outlined"
+              onClick={(e) => {
+                addItem(itemData)
+                setItemData({name:"", quantity:1})
+                handleClose("edit")
+              }}>Add</Button>
+              <Button variant="outlined"
+              onClick={(e) => {
+                removeItem(itemData.name,itemData.quantity)
+                setItemData({name:"", quantity:1})
+                handleClose("edit")
+              }}>Remove</Button>
+            </Stack>
+
+          </Stack>
+        </Box>
+      </Modal>
+
+    
+       {showAddItem === true ? (
+          <Stack width="1000px" direction={"row"} spacing={1}>
+            <TextField id="outlined-basic" label="New Item" variant="outlined" fullWidth value={itemData.name}  onChange={(e) => setItemData((prevState) => ({...prevState, name: e.target.value}))}/>
+            <TextField id="outlined-basic" type="number" label="Quantity" variant="outlined" fullWidth value={itemData.quantity}  inputProps={{ min: 1 }} onChange={(e) => setItemData((prevState) => ({...prevState, quantity: e.target.value}))}/>
+            <Button variant="contained" 
+            onClick={() => {
               addItem(itemData)
-              setItemData({name:"", quantity:1})
-              handleClose("more_add")
+              setItemData({name:"",quantity:1})
+              setShowAddItem(false)
             }}>Add</Button>
+            <Button variant="contained"
+            onClick={() => {
+              setItemData({name:"",quantity:1})
+              setShowAddItem(false)
+            }}>Cancel</Button>
+          </Stack>
+            )
+            : (
+              <Button variant="contained" name="add" onClick={() => setShowAddItem(true)}>Add New Item</Button>
+            )
+            }
+
+        <Box border={'1px solid #333'}>
+          <Box width="1000px" height="100px" bgcolor={"#ADD8E6"} display={"flex"} justifyContent={"center"} alignItems={"center"}>
+            <Typography variant={"h2"} color={"#333"} textAlign={"center"}>
+                Item Management
+            </Typography>
+          </Box>
+            <Stack width="100%" height="300px" spacing={2} overflow={'auto'} >
+              {pantry.map(({name,count}) => (
+                  <Box 
+                    key={name}
+                    width="100%"
+                    minHeight="250px"
+                    display={'flex'}
+                    justifyContent={"space-between"}
+                    alignItems={'center'}
+                    bgcolor={'#f0f0f0'}
+                    paddingX={5}>
+                    <Typography variant={'h3'} color={'#333'} textAlign={"center"}>
+                        {name}
+                    </Typography>
+                    <Typography variant={'h3'} color={'#333'} textAlign={"center"}>
+                        {count}
+                    </Typography>
+                  <Stack direction="row" spacing={2}>
+                    <Button variant="contained" name="edit"
+                    onClick={(e) => {
+                      setItemData((prevState) => ({...prevState,name: name}))
+                      handleOpen(e)
+                    }}>Edit</Button>
+                    <Button variant="contained" name="delete"
+                    onClick={() =>{
+                      removeItem(name,count)
+                    }}>Remove</Button>
+                  </Stack>
+                </Box>
+              ))} 
           </Stack>
         </Box>
-      </Modal>
-
-      {/*Delete Modal*/}
-      <Modal
-        open={openData.delete}
-        onClose={() => handleClose('delete')}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
-        <Box sx={style}>
-          <Typography id="modal-modal-title" variant="h6" component="h2">
-            How much would you like to remove from {itemData.name}?
-          </Typography>
-          <Stack width="100%" direction={'row'} spacing={2}>
-            <TextField 
-            id="outlined-basic"  
-            type="number" 
-            label="Quantity" 
-            variant="outlined" 
-            fullWidth value={itemData.quantity} 
-            inputProps={{ min: 1 }}
-            onChange={(e) => setItemData((prevState) => ({...prevState, quantity: e.target.value}))}/>
-            <Button variant="outlined" name="delete"
-            onClick={(e) => {
-              removeItem(itemData)
-              setItemData({name:"", quantity:1})
-              handleClose("delete")
-            }}>Remove</Button>
-          </Stack>
-        </Box>
-      </Modal>
-
-      
-
-      <Button variant="contained" name="add" onClick={handleOpen}>Add New Item</Button>
-      <Box border={'1px solid #333'}>
-        <Box width="800px" height="100px" bgcolor={"#ADD8E6"} display={"flex"} justifyContent={"center"} alignItems={"center"}>
-          <Typography variant={"h2"} color={"#333"} textAlign={"center"}>
-              Item Management
-          </Typography>
-        </Box>
-          <Stack width="800px" height="300px" spacing={2} overflow={'auto'} >
-            {pantry.map(({name,count}) => (
-                <Box 
-                  key={name}
-                  width="100%"
-                  minHeight="250px"
-                  display={'flex'}
-                  justifyContent={"space-between"}
-                  alignItems={'center'}
-                  bgcolor={'#f0f0f0'}
-                  paddingX={5}>
-                  <Typography variant={'h3'} color={'#333'} textAlign={"center"}>
-                      {name}
-                  </Typography>
-                  <Typography variant={'h3'} color={'#333'} textAlign={"center"}>
-                      {count}
-                  </Typography>
-                <Stack direction="row" spacing={2}>
-                  <Button variant="contained" name="more_add"
-                  onClick={(e) => {
-                    setItemData((prevState) => ({...prevState,name: name}))
-                    handleOpen(e)
-                  }}>Add</Button>
-                  <Button variant="contained" name="delete"
-                  onClick={(e) =>{
-                    setItemData((prevState) => ({...prevState,name: name}))
-                    handleOpen(e)
-                  }}>Remove</Button>
-                </Stack>
-              </Box>
-            ))} 
-        </Stack>
-      </Box>
     </Box>
   );
 }
