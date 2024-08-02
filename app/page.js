@@ -19,10 +19,13 @@ const style = {
   flexDirection: "column",
   gap: 3
 };
+const test = ["pantry","hello","items","NieR"]
 
 const formatString = (str) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 
 export default function Home() {
+  const [pantries, setPantries] = useState([])
+  const [currentPantry, setCurrentPantry] = useState("")
   const [pantry,setPantry] = useState([]);
   const [switches,setSwitches] = useState({
     edit: false,
@@ -38,25 +41,42 @@ export default function Home() {
   const handleClose = (name) => {
     setSwitches((prevState) => ({ ...prevState, [name]: false }));
   };
+  const switchPantry = (pantry) => setCurrentPantry(pantry)
 
   useEffect( () => {
+    addPantries();
+  })
+  useEffect( () => {
     updatePantry()
-  },[])
+  },[currentPantry])
 
+
+  const addPantries = async () => {
+    try{
+      const response = await fetch("./backend/api/collections.js");
+      const data = await response.json();
+      console.log(data);
+    }
+    catch(error){
+      console.error(error)
+    }
+  }
   const updatePantry = async () => {
-    const snapshot = query(collection(firestore,'pantry'))
-    const docs = await getDocs(snapshot)
-    const pantryList = []
-    docs.forEach((doc) => {
-      pantryList.push({name: doc.id, ...doc.data()})
-    })
-    setPantry(pantryList)
+    if(currentPantry){
+      const snapshot = query(collection(firestore,currentPantry))
+      const docs = await getDocs(snapshot)
+      const pantryList = []
+      docs.forEach((doc) => {
+        pantryList.push({name: doc.id, ...doc.data()})
+      })
+      setPantry(pantryList)
+  }
   }
  
 
   const addItem = async (item) => {
     try{
-      const docRef = doc(collection(firestore,'pantry'),formatString(item.name))
+      const docRef = doc(collection(firestore,currentPantry),formatString(item.name))
       const docSnap = await getDoc(docRef)
       const quantity = Number(item.quantity)
       if(quantity > 0 && item.name.replace(/\s/g,"") !== ""){
@@ -76,7 +96,7 @@ export default function Home() {
   }
   }
   const removeItem = async (name,quantity) => {
-    const docRef = doc(collection(firestore,'pantry'),name)
+    const docRef = doc(collection(firestore,currentPantry),name)
     const docSnap = await getDoc(docRef)
     quantity = Number(quantity)
     if(!isNaN(quantity)){
@@ -95,7 +115,7 @@ export default function Home() {
   const findItem = async (item) => {
     try{
       if(item !== ""){
-        const docRef = doc(collection(firestore,'pantry'),formatString(item))
+        const docRef = doc(collection(firestore,currentPantry),formatString(item))
         const docSnap = await getDoc(docRef)
           if(docSnap.exists()){
             setPantry([{name:docSnap.id, ...docSnap.data()}])
@@ -104,6 +124,9 @@ export default function Home() {
             setPantry([])
           }
       }
+      else{
+        await updatePantry()
+      }
     }
     catch(error){
       console.error(error)
@@ -111,6 +134,22 @@ export default function Home() {
 
   }
   return (
+    <Stack width="100vw" height="100vh" direction={"row"} gap={0}>
+      <Box width="30%" height="100%"  display={"flex"} flexDirection={"column"} border={'1px solid #333'}>
+        <Typography variant={"h4"} color={"#333"} textAlign={"center"} sx={{height:"5vh",}}>Your Pantries</Typography>
+        <Stack width="23vw" height="90vh" border={"1px solid #333"} direction={"column"} overflow={"auto"}>
+          {test.map((name) => (
+              <Button
+              variant="outlined"
+              sx={{height:"11vh"}} 
+              key={name}
+              onClick={async () => {
+                switchPantry(name)
+                await updatePantry()}}>{name}</Button>
+          ))} 
+        </Stack>
+        <Button variant="outlined" sx={{ position: 'absolute', bottom: 0, width: "23vw", height: "5vh", borderRadius: "0px"}}>Add New Pantry</Button>
+      </Box>
     <Box       
     width="100vw"
     height="100vh"
@@ -233,5 +272,6 @@ export default function Home() {
           </Stack>
         </Box>
     </Box>
+    </Stack>
   );
 }
