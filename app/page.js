@@ -3,6 +3,7 @@ import {Box, Stack, Typography, Button, Modal, TextField} from "@mui/material"
 import { firestore } from "@/firebase";
 import {collection, doc, query, getDocs, setDoc, deleteDoc, getDoc} from 'firebase/firestore'
 import {useState, useEffect} from "react"
+import { Alegreya } from "next/font/google";
 
 const style = {
   position: 'absolute',
@@ -19,21 +20,23 @@ const style = {
   gap: 3
 };
 
+const formatString = (str) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+
 export default function Home() {
   const [pantry,setPantry] = useState([]);
-  const [openData,setOpenData] = useState({
+  const [switches,setSwitches] = useState({
     edit: false,
-    find: false
+    find: false,
+    showAddItem: false,
   });
   const [itemData, setItemData] = useState({
     name: '',
     quantity: 1
   });
-  const [showAddItem, setShowAddItem] = useState(false);
 
-  const handleOpen = (e) => setOpenData((prevState) => ({...prevState,[e.target.name]: true}))
+  const handleOpen = (e) => setSwitches((prevState) => ({...prevState,[e.target.name]: true}))
   const handleClose = (name) => {
-    setOpenData((prevState) => ({ ...prevState, [name]: false }));
+    setSwitches((prevState) => ({ ...prevState, [name]: false }));
   };
 
   useEffect( () => {
@@ -53,10 +56,10 @@ export default function Home() {
 
   const addItem = async (item) => {
     try{
-      const docRef = doc(collection(firestore,'pantry'),item.name.charAt(0).toUpperCase() + item.name.slice(1).toLowerCase())
+      const docRef = doc(collection(firestore,'pantry'),formatString(item.name))
       const docSnap = await getDoc(docRef)
       const quantity = Number(item.quantity)
-      if(quantity > 0){
+      if(quantity > 0 && item.name.replace(/\s/g,"") !== ""){
         if(docSnap.exists()){
           const {count} = docSnap.data()
           await setDoc(docRef, {count: count + quantity})
@@ -88,7 +91,25 @@ export default function Home() {
     }
   }
     await updatePantry()
-} 
+}
+  const findItem = async (item) => {
+    try{
+      if(item !== ""){
+        const docRef = doc(collection(firestore,'pantry'),formatString(item))
+        const docSnap = await getDoc(docRef)
+          if(docSnap.exists()){
+            setPantry([{name:docSnap.id, ...docSnap.data()}])
+          }
+          else{
+            setPantry([])
+          }
+      }
+    }
+    catch(error){
+      console.error(error)
+    }
+
+  }
   return (
     <Box       
     width="100vw"
@@ -102,7 +123,7 @@ export default function Home() {
 
       {/*Edit Modal*/}
       <Modal
-        open={openData.edit}
+        open={switches.edit}
         onClose={() => handleClose('edit')}
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
@@ -112,14 +133,7 @@ export default function Home() {
             How much would you like to add or remove for {itemData.name}?
           </Typography>
           <Stack width="100%" direction={'column'} spacing={2}>
-            <TextField 
-            id="outlined-basic"  
-            type="number" 
-            label="Quantity" 
-            variant="outlined" 
-            fullWidth value={itemData.quantity} 
-            inputProps={{ min: 1 }}
-            onChange={(e) => setItemData((prevState) => ({...prevState, quantity: e.target.value}))}/>
+            <TextField id="outlined-basic"  type="number" label="Quantity" variant="outlined" fullWidth value={itemData.quantity} inputProps={{ min: 1 }} onChange={(e) => setItemData((prevState) => ({...prevState, quantity: e.target.value}))}/>
             <Stack width="100%" direction={"row"} spacing={2}>
               <Button variant="outlined"
               onClick={(e) => {
@@ -140,7 +154,7 @@ export default function Home() {
       </Modal>
 
     
-       {showAddItem === true ? (
+       {switches.showAddItem ? (
           <Stack width="1000px" direction={"row"} spacing={1}>
             <TextField id="outlined-basic" label="New Item" variant="outlined" fullWidth value={itemData.name}  onChange={(e) => setItemData((prevState) => ({...prevState, name: e.target.value}))}/>
             <TextField id="outlined-basic" type="number" label="Quantity" variant="outlined" fullWidth value={itemData.quantity}  inputProps={{ min: 1 }} onChange={(e) => setItemData((prevState) => ({...prevState, quantity: e.target.value}))}/>
@@ -148,17 +162,35 @@ export default function Home() {
             onClick={() => {
               addItem(itemData)
               setItemData({name:"",quantity:1})
-              setShowAddItem(false)
+              setSwitches((prevState) => ({...prevState, showAddItem: false}))
             }}>Add</Button>
             <Button variant="contained"
             onClick={() => {
               setItemData({name:"",quantity:1})
-              setShowAddItem(false)
+              setSwitches((prevState) => ({...prevState, showAddItem: false}))
             }}>Cancel</Button>
           </Stack>
             )
-            : (
-              <Button variant="contained" name="add" onClick={() => setShowAddItem(true)}>Add New Item</Button>
+            : switches.find ? (
+              <Stack width="1000px" direction={"row"} spacing={2}>
+                <TextField id="outlined-basic" label="Type in Item's name" variant="outlined" fullWidth value={itemData.name} 
+                onChange={(e) => {
+                setItemData((prevState) => ({...prevState, name:e.target.value}))
+                findItem(e.target.value)}}/>
+                <Button variant="contained"
+                  onClick={async () => {
+                  setItemData({name:"",quantity:1})
+                  await updatePantry()
+                  setSwitches((prevState) => ({...prevState, find: false}))
+                }}>Cancel</Button>
+              </Stack>
+            )
+            :
+            (
+              <Stack direction={"row"} spacing={2}>
+                <Button variant="contained" onClick={() => setSwitches((prevState) => ({...prevState, showAddItem: true}))}>Add New Item</Button>
+                <Button variant="contained" onClick={() => setSwitches((prevState) => ({...prevState, find: true}))}>Find Item</Button>
+              </Stack>
             )
             }
 
