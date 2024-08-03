@@ -61,7 +61,7 @@ export default function Home() {
 
   const updatePantryList = async () => {
     try{
-      const response = await fetch("/api/collections");
+      const response = await fetch("http://localhost:8080/api/collections");
       const data = await response.json();
       const pantriesList = [];
       data.collections.forEach(async (d) => {
@@ -70,6 +70,7 @@ export default function Home() {
       setPantries(pantriesList)
     }
     catch(error){
+      setCurrentPantry("pantry")
       console.error(error)
     }
   }

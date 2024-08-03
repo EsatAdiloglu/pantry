@@ -4,7 +4,7 @@ const db = require('../firebaseAdmin');
 
 
 // Define the "/collections" endpoint
-router.get('/', async (req, res) => {
+router.get('/collections', async (req, res) => {
   try {
     const collections = await db.listCollections();
     const collectionNames = collections.map((col) => col.id);
