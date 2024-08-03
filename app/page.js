@@ -34,37 +34,40 @@ export default function Home() {
     edit: false,
     find: false,
     showAddItem: false,
+    newPantry: false,
+
   });
   const [itemData, setItemData] = useState({
     name: '',
     quantity: 1
   });
+  const [pantryData, setPantryData] = useState("")
 
 
   useEffect( () => {
-    addPantries();
+    updatePantryList();
   },[])
+
   useEffect( () => {
     updatePantry()
   },[currentPantry])
 
-  const handleOpen = (e) => setSwitches((prevState) => ({...prevState,[e.target.name]: true}))
-  const handleClose = (name) => {
+  const handleSwitchOpen = (e) => setSwitches((prevState) => ({...prevState,[e.target.name]: true}))
+  const handleSwitchClose = (name) => {
     setSwitches((prevState) => ({ ...prevState, [name]: false }));
   };
   const switchPantry = (pantry) => setCurrentPantry(pantry)
 
 
-  const addPantries = async () => {
+  const updatePantryList = async () => {
     try{
       const response = await fetch("http://localhost:8080/api/collections");
       const data = await response.json();
+      const pantriesList = [];
       data.collections.forEach(async (d) => {
-        console.log(d)
-        if(!pantries.includes(d)){
-        await setPantries((prevState) => [...prevState, d])
-        }
+        pantriesList.push(d)
       });
+      setPantries(pantriesList)
     }
     catch(error){
       console.error(error)
@@ -77,12 +80,36 @@ export default function Home() {
       const docs = await getDocs(snapshot)
       const pantryList = []
       docs.forEach((doc) => {
-        pantryList.push({name: doc.id, ...doc.data()})
+        doc.id === " " ? null : pantryList.push({name: doc.id, ...doc.data()})
       })
       setPantry(pantryList)
   }
   }
  
+  const addPantry = async (pantry) => {
+    try{
+      if(pantry.replace(/\s/g,"") !== ""){
+        const response = await fetch("http://localhost:8080/api/collections",{
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({collectionName: pantry, data: " "})
+        })
+        if(response.ok){
+          const result = await response.json()
+          console.log(result)
+          await updatePantryList()
+        }
+        else{
+          console.error("Something went wrong")
+      }
+    }
+  }
+    catch(error){
+      console.error(error)
+    }
+  }
 
   const addItem = async (item) => {
     try{
@@ -107,6 +134,8 @@ export default function Home() {
   }
   const removeItem = async (name,quantity) => {
     const docRef = doc(collection(firestore,currentPantry),name)
+    console.log(currentPantry)
+    console.log(docRef)
     const docSnap = await getDoc(docRef)
     quantity = Number(quantity)
     if(!isNaN(quantity)){
@@ -135,7 +164,7 @@ export default function Home() {
           }
       }
       else{
-        await updatePantry()
+        await updatePantryList()
       }
     }
     catch(error){
@@ -145,37 +174,11 @@ export default function Home() {
   }
   return (
     <Stack width="100vw" height="100vh" direction={"row"} gap={0}>
-      <Box width="30%" height="100%"  display={"flex"} flexDirection={"column"} border={'1px solid #333'}>
-        <Typography variant={"h4"} color={"#333"} textAlign={"center"} align={"center"} sx={{lineHeight: 2.5, height:"10%"}}>Your Pantries</Typography>
-        <Stack width="23vw" height="85.2%" border={"1px solid #333"} direction={"column"} overflow={"auto"} sx={{boxSizing: 'border-box'}}>
-          {pantries.map((name) => (
-              <Button
-              variant="outlined"
-              sx={{height:"11vh", minHeight:"11vh", borderRadius: 0,color:"black", borderColor:"black","&:hover":{borderColor:"black",color:"black",backgroundColor:"#e2e2e2"}}} 
-              key={name}
-              onClick={async () => {
-                switchPantry(name)
-                await updatePantry()}}>{name}</Button>
-          ))} 
-        </Stack>
-        <Button variant="outlined" 
-        sx={{ position: 'absolute', bottom: 0, width: "23vw", height: "5%", borderRadius: "0px",color:"black", borderColor:"black", "&:hover":{borderColor:"black",color:"black",backgroundColor:"#e2e2e2"}}}
-        >Add New Pantry</Button>
-      </Box>
-    <Box       
-    width="100vw"
-    height="100vh"
-    display={'flex'}
-    justifyContent={'center'}
-    flexDirection={"column"}
-    alignItems={'center'}
-    gap={2}
-   > 
 
       {/*Edit Modal*/}
       <Modal
         open={switches.edit}
-        onClose={() => handleClose('edit')}
+        onClose={() => handleSwitchClose('edit')}
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
       >
@@ -190,13 +193,13 @@ export default function Home() {
               onClick={(e) => {
                 addItem(itemData)
                 setItemData({name:"", quantity:1})
-                handleClose("edit")
+                handleSwitchClose("edit")
               }}><AddIcon />Add</Button>
               <Button variant="outlined"
               onClick={(e) => {
                 removeItem(itemData.name,itemData.quantity)
                 setItemData({name:"", quantity:1})
-                handleClose("edit")
+                handleSwitchClose("edit")
               }}><RemoveIcon />Remove</Button>
             </Stack>
 
@@ -204,9 +207,72 @@ export default function Home() {
         </Box>
       </Modal>
 
+      {/*Add New Pantry Modal*/}
+      <Modal
+        open={switches.newPantry}
+        onClose={() => handleSwitchClose('newPantry')}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        <Box sx={style}>
+          <Typography id="modal-modal-title" variant="h6" component="h2">
+            Put in the pantry's name
+          </Typography>
+          <Stack width="100%" direction={'column'} spacing={2}>
+            <TextField id="outlined-basic" label="Name" variant="outlined" fullWidth value={pantryData} onChange={(e) => setPantryData(e.target.value)}/>
+            <Stack width="100%" direction={"row"} spacing={2}>
+              <Button variant="outlined"
+              onClick={() => {
+                addPantry(pantryData)
+                setPantryData("")
+                handleSwitchClose("newPantry")
+              }}><AddIcon />Add</Button>
+              <Button variant="outlined"
+              onClick={() => {
+                setPantryData("")
+                handleSwitchClose("newPantry")
+              }}>Cancel</Button>
+            </Stack>
+
+          </Stack>
+        </Box>
+      </Modal>
+
+
+
+
+      <Box width="30%" height="100%"  display={"flex"} flexDirection={"column"} border={'1px solid #333'}>
+        <Typography variant={"h4"} color={"#333"} textAlign={"center"} align={"center"} sx={{lineHeight: 2.5, height:"9.9%"}}>Your Pantries</Typography>
+        <Stack width="23vw" height="85.2%" border={"1px solid #333"} direction={"column"} overflow={"auto"} sx={{boxSizing: 'border-box'}}>
+          {pantries.map((name) => (
+              <Button
+              variant="outlined"
+              sx={{height:"11vh", minHeight:"11vh", borderRadius: 0,textTransform: 'none', color:"black", borderColor:"black","&:hover":{borderColor:"black",color:"black",backgroundColor:"#e2e2e2"}}} 
+              key={name}
+              onClick={async () => {
+
+                switchPantry(name)
+                updatePantry()}}>{name}</Button>
+          ))} 
+        </Stack>
+        <Button variant="outlined" name="newPantry"
+        sx={{ position: 'absolute', bottom: 0, width: "23vw", height: "5%", borderRadius: "0px",color:"black", borderColor:"black", "&:hover":{borderColor:"black",color:"black",backgroundColor:"#e2e2e2"}}}
+        onClick={(e) => handleSwitchOpen(e)}>Add New Pantry</Button>
+      </Box>
+    <Box       
+    width="100vw"
+    height="100vh"
+    display={'flex'}
+    justifyContent={'center'}
+    flexDirection={"column"}
+    alignItems={'center'}
+    gap={2}
+   > 
+
+
     
        {switches.showAddItem ? (
-          <Stack width="100%"  direction={"row"} height="10%" justifyContent={"center"} alignItems={"center"} spacing={2}>
+          <Stack width="100%"  direction={"row"} height="8.5%" justifyContent={"center"} alignItems={"center"} spacing={2}>
             <TextField id="outlined-basic" label="New Item" variant="outlined" value={itemData.name}  sx={{width: "400px"}} onChange={(e) => setItemData((prevState) => ({...prevState, name: e.target.value}))}/>
             <TextField id="outlined-basic" width="20%" type="number" label="Quantity" variant="outlined"  value={itemData.quantity}  inputProps={{ min: 1 }} sx={{width: "400px"}} onChange={(e) => setItemData((prevState) => ({...prevState, quantity: e.target.value}))}/>
             <Button variant="contained" 
@@ -223,7 +289,7 @@ export default function Home() {
           </Stack>
             )
             : switches.find ? (
-              <Stack width="100%" direction={"row"} spacing={2} height="10%" justifyContent={"center"} alignItems={"center"}>
+              <Stack width="100%" direction={"row"} spacing={2} height="8.5%" justifyContent={"center"} alignItems={"center"}>
                 <TextField id="outlined-basic" label="Type in Item's name" variant="outlined" value={itemData.name} sx={{width: "400px"}}
                 onChange={(e) => {
                 setItemData((prevState) => ({...prevState, name:e.target.value}))
@@ -238,7 +304,7 @@ export default function Home() {
             )
             :
             (
-              <Stack direction={"row"} width="100%" height="10%" alignItems={"center"} justifyContent={"center"} spacing={2}>
+              <Stack direction={"row"} width="100%" height="8.5%" alignItems={"center"} justifyContent={"center"} spacing={2}>
                 <Button variant="contained" onClick={() => setSwitches((prevState) => ({...prevState, showAddItem: true}))}><AddIcon />Add New Item</Button>
                 <Button variant="contained" onClick={() => setSwitches((prevState) => ({...prevState, find: true}))}><SearchIcon />Find Item</Button>
               </Stack>
@@ -246,11 +312,6 @@ export default function Home() {
             }
 
         <Box width="100%" height="90%" border={'1px solid #333'} sx={{borderLeft: 0}}>
-          {/* <Box width="100%" height="100px" bgcolor={"#ADD8E6"} display={"flex"} justifyContent={"center"} alignItems={"center"}>
-            <Typography variant={"h2"} color={"#333"} textAlign={"center"}>
-                Item Management
-            </Typography>
-          </Box> */}
             <Stack width="100%" height="100%" position={"relative"} spacing={2} overflow={'auto'} >
               {pantry.map(({name,count}) => (
                   <Box 
@@ -272,7 +333,7 @@ export default function Home() {
                     <Button variant="contained" name="edit"
                     onClick={(e) => {
                       setItemData((prevState) => ({...prevState,name: name}))
-                      handleOpen(e)
+                      handleSwitchOpen(e)
                     }}><CreateIcon />Edit</Button>
                     <Button variant="contained" color="error" name="delete"
                     onClick={() =>{
