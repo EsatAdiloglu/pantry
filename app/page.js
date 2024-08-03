@@ -19,20 +19,18 @@ const style = {
   flexDirection: "column",
   gap: 3
 };
-const test = ["pantry","test","items","NieR"]
+const test = ["pantry","hello","items","NieR"]
 
 const formatString = (str) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 
 export default function Home() {
-  const [pantryData, setPantryData] = useState("")
-  const [pantries, setPantries] = useState(["pantry"])
+  const [pantries, setPantries] = useState([])
   const [currentPantry, setCurrentPantry] = useState("")
   const [pantry,setPantry] = useState([]);
   const [switches,setSwitches] = useState({
     edit: false,
     find: false,
     showAddItem: false,
-    newPantry: false
   });
   const [itemData, setItemData] = useState({
     name: '',
@@ -43,27 +41,26 @@ export default function Home() {
   const handleClose = (name) => {
     setSwitches((prevState) => ({ ...prevState, [name]: false }));
   };
-  const addPantry = (name) => setPantries((prevState) => [...prevState, name])
   const switchPantry = (pantry) => setCurrentPantry(pantry)
 
+  useEffect( () => {
+    addPantries();
+  })
   useEffect( () => {
     updatePantry()
   },[currentPantry])
 
 
-  // const addPantries = async () => {
-  //   try{
-  //     const response = await fetch("./backend/api/collections");
-  //     const data = await response.json();
-  //     console.log(data);
-  //   }
-  //   catch(error){
-  //     console.error(error)
-  //   }
-  // }
-
-
-
+  const addPantries = async () => {
+    try{
+      const response = await fetch("./backend/api/collections.js");
+      const data = await response.json();
+      console.log(data);
+    }
+    catch(error){
+      console.error(error)
+    }
+  }
   const updatePantry = async () => {
     if(currentPantry){
       const snapshot = query(collection(firestore,currentPantry))
@@ -137,8 +134,31 @@ export default function Home() {
 
   }
   return (
-    
     <Stack width="100vw" height="100vh" direction={"row"} gap={0}>
+      <Box width="30%" height="100%"  display={"flex"} flexDirection={"column"} border={'1px solid #333'}>
+        <Typography variant={"h4"} color={"#333"} textAlign={"center"} sx={{height:"5vh",}}>Your Pantries</Typography>
+        <Stack width="23vw" height="90vh" border={"1px solid #333"} direction={"column"} overflow={"auto"}>
+          {test.map((name) => (
+              <Button
+              variant="outlined"
+              sx={{height:"11vh"}} 
+              key={name}
+              onClick={async () => {
+                switchPantry(name)
+                await updatePantry()}}>{name}</Button>
+          ))} 
+        </Stack>
+        <Button variant="outlined" sx={{ position: 'absolute', bottom: 0, width: "23vw", height: "5vh", borderRadius: "0px"}}>Add New Pantry</Button>
+      </Box>
+    <Box       
+    width="100vw"
+    height="100vh"
+    display={'flex'}
+    justifyContent={'center'}
+    flexDirection={"column"}
+    alignItems={'center'}
+    gap={2}
+   > 
 
       {/*Edit Modal*/}
       <Modal
@@ -171,70 +191,6 @@ export default function Home() {
           </Stack>
         </Box>
       </Modal>
-
-      {/*NewPantry Modal*/}
-           <Modal
-        open={switches.newPantry}
-        onClose={() => handleClose('newPantry')}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
-        <Box sx={style}>
-          <Typography id="modal-modal-title" variant="h6" component="h2">
-            Please enter the new pantry's name
-          </Typography>
-          <Stack width="100%" direction={'column'} spacing={2}>
-            <TextField id="outlined-basic"  label="Name" variant="outlined" fullWidth value={pantryData}  onChange={(e) => setPantryData(e.target.value)}/>
-            <Stack width="100%" direction={"row"} spacing={2}>
-              <Button variant="outlined"
-              onClick={() => {
-                addPantry(pantryData)
-                setPantryData("")
-                handleClose("newPantry")
-              }}>Add</Button>
-              <Button variant="outlined"
-              onClick={() => {
-                setPantryData("")
-                handleClose("newPantry")
-              }}>Cancel</Button>
-            </Stack>
-
-          </Stack>
-        </Box>
-      </Modal>
-
-
-
-
-      <Box width="30%" height="100%"  display={"flex"} flexDirection={"column"} border={'1px solid #333'}>
-        <Typography variant={"h4"} color={"#333"} textAlign={"center"} sx={{height:"5vh",}}>Your Pantries</Typography>
-        <Stack width="23vw" height="90vh" border={"1px solid #333"} direction={"column"} overflow={"auto"}>
-          {pantries.map((name) => (
-              <Button
-              variant="outlined"
-              sx={{height:"11vh"}} 
-              key={name}
-              onClick={async () => {
-                switchPantry(name)
-                await updatePantry()}}>{name}</Button>
-          ))} 
-        </Stack>
-        <Button variant="outlined" name="newPantry" sx={{ position: 'absolute', bottom: 0, width: "23vw", height: "5vh", borderRadius: "0px"}}
-        onClick={(e) => {
-          handleOpen(e)
-        }}>Add New Pantry</Button>
-      </Box>
-    <Box       
-    width="100vw"
-    height="100vh"
-    display={'flex'}
-    justifyContent={'center'}
-    flexDirection={"column"}
-    alignItems={'center'}
-    gap={2}
-   > 
-
-
 
     
        {switches.showAddItem ? (
