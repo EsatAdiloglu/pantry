@@ -80,7 +80,7 @@ export default function Home() {
       const docs = await getDocs(snapshot)
       const pantryList = []
       docs.forEach((doc) => {
-        doc.id === " " ? null : pantryList.push({name: doc.id, ...doc.data()})
+        doc.data().count === -1 ? null : pantryList.push({name: doc.id, ...doc.data()})
       })
       setPantry(pantryList)
   }
@@ -89,21 +89,9 @@ export default function Home() {
   const addPantry = async (pantry) => {
     try{
       if(pantry.replace(/\s/g,"") !== ""){
-        const response = await fetch("http://localhost:8080/api/collections",{
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({collectionName: pantry, data: " "})
-        })
-        if(response.ok){
-          const result = await response.json()
-          console.log(result)
-          await updatePantryList()
-        }
-        else{
-          console.error("Something went wrong")
-      }
+        const docRef = doc(collection(firestore,pantry),"Don't remove so that collection exist")
+        await setDoc(docRef, {count: -1})  //So that the collection can appear. If the document field is empty, then it won't appear
+        await updatePantryList()
     }
   }
     catch(error){
