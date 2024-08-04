@@ -1,5 +1,5 @@
 "use client"
-import {Box, Stack, Typography, Button, Modal, TextField} from "@mui/material"
+import {Box, Stack, Typography, Button, Modal, TextField, Card, CardMedia} from "@mui/material"
 import {firestore, app} from "@/firebase";
 import {collection, doc, query, getDocs, setDoc, deleteDoc, getDoc} from 'firebase/firestore'
 import {getAuth, signOut, onAuthStateChanged} from "firebase/auth"
@@ -379,7 +379,7 @@ export default function Tracker() {
 
         <Box width="100%" height="90%" border={'1px solid #333'} sx={{borderLeft: 0}}>
             <Stack width="100%" height="100%" position={"relative"} spacing={2} overflow={'auto'} >
-              {pantry.map(({name,count}) => (
+              {pantry.map(({name,count,image}) => (
                   <Box 
                     key={name}
                     width="100%"
@@ -389,10 +389,27 @@ export default function Tracker() {
                     alignItems={'center'}
                     bgcolor={'#f0f0f0'}
                     paddingX={5}>
+                    <Stack direction={"row"} justifyContent={"center"} alignItems={"center"} spacing={5}>
+                    {image ? (
+                      <Card>
+                        <CardMedia
+                        component="img"
+                        image={image}
+                        alt="boxes"
+                        sx={{height:"auto",maxWidth:"150px"}}
+                        />
+                      </Card>
+                    ) 
+                    :
+                    (
+                      <Box sx={{height:"150px", width:"150px"}}></Box>
+                    ) 
+                    }
                     <Typography variant={'h3'} color={'#333'} textAlign={"center"}>
                         {name}
                     </Typography>
-                    <Typography variant={'h3'} color={'#333'} textAlign={"center"}>
+                    </Stack>
+                    <Typography variant={'h3'} color={'#333'} textAlign={"center"} sx={{position:"absolute", left:"50%"}}>
                         {count}
                     </Typography>
                   <Stack direction="row" spacing={2}>
