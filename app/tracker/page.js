@@ -104,9 +104,10 @@ export default function Tracker() {
     }
   }
 
-  const handleSwitchOpen = (e) => setSwitches((prevState) => ({...prevState,[e.target.name]: true}))
-  const handleSwitchClose = (name) => {
-    setSwitches((prevState) => ({ ...prevState, [name]: false }));
+  const handleSwitchOpen = (name) => {
+    setSwitches((prevState) => ({...prevState,[name]: true}))}
+  const handleSwitchClose = async (name) => {
+    await setSwitches((prevState) => ({ ...prevState, [name]: false }));
   };
   const switchPantry = (pantry) => setCurrentPantry(pantry)
 
@@ -128,7 +129,7 @@ export default function Tracker() {
     }
     }
     catch(error){
-      console.error("Uh oh:",error)
+      console.error(error)
     }
   }
 
@@ -253,7 +254,8 @@ export default function Tracker() {
       {/*Edit Modal*/}
       <Modal
         open={switches.edit}
-        onClose={() => handleSwitchClose('edit')}
+        onClose={() => {
+          handleSwitchClose('edit')}}
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
       >
@@ -340,9 +342,9 @@ export default function Tracker() {
 
 
 
-      <Box width="30%" height="100%"  display={"flex"} flexDirection={"column"} border={'1px solid #333'}>
-        <Typography variant={"h4"} color={"#333"} textAlign={"center"} align={"center"} sx={{lineHeight: 4.5, height:"15.7%"}}>Your Pantries</Typography>
-        <Stack width="23vw" height="79.5%" border={"1px solid #333"} direction={"column"} overflow={"auto"} sx={{boxSizing: 'border-box'}}>
+      <Box width="30%" height="100vh"  display={"flex"} flexDirection={"column"} border={'1px solid #333'}>
+        <Typography variant={"h4"} color={"#333"} textAlign={"center"} align={"center"} sx={{lineHeight: 4.5, height:"16.45%"}}>Your Pantries</Typography>
+        <Stack width="23vw" height="75.7%" border={"1px solid #333"} direction={"column"} overflow={"auto"}>
           {pantries.map((name) => (
               <Button
               variant="outlined"
@@ -353,9 +355,9 @@ export default function Tracker() {
                 updatePantry()}}>{name}</Button>
           ))} 
         </Stack>
-        <Button variant="outlined" name="newPantry"
-        sx={{ position: 'absolute', bottom: 0, width: "23vw", height: "5%", borderRadius: "0px",color:"black", borderColor:"black", "&:hover":{borderColor:"black",color:"black",backgroundColor:"#e2e2e2"}}}
-        onClick={(e) => handleSwitchOpen(e)}>Add New Pantry</Button>
+        <Button variant="outlined" 
+        sx={{ position: 'absolute', bottom: 0, width: "23vw", height: "8%", borderRadius: "0px",color:"black", borderColor:"black", "&:hover":{borderColor:"black",color:"black",backgroundColor:"#e2e2e2"}}}
+        onClick={(e) => handleSwitchOpen("newPantry")}>Add New Pantry</Button>
       </Box>
     <Box       
     width="100vw"
@@ -370,7 +372,7 @@ export default function Tracker() {
 
     
        {switches.showAddItem ? (
-          <Stack width="100%"  direction={"column"} height="15%" justifyContent={"center"} alignItems={"center"} spacing={2}>
+          <Stack width="100%"  direction={"column"} height="15%" minHeight="15%" justifyContent={"center"} alignItems={"center"} spacing={2}>
             <Stack width="100%" direction={"row"} justifyContent={"center"} alignItems={"center"} spacing={2}>
             <TextField id="outlined-basic" label="New Item" variant="outlined" value={itemData.name}  sx={{width: "400px"}} onChange={(e) => setItemData((prevState) => ({...prevState, name: e.target.value}))}/>
             <TextField id="outlined-basic" width="20%" type="number" label="Quantity" variant="outlined"  value={itemData.quantity}  inputProps={{ min: 1 }} sx={{width: "400px"}} onChange={(e) => setItemData((prevState) => ({...prevState, quantity: e.target.value}))}/>
@@ -399,7 +401,7 @@ export default function Tracker() {
           </Stack>
             )
             : switches.find ? (
-              <Stack width="100%" direction={"row"} spacing={2} height="15%" justifyContent={"center"} alignItems={"center"}>
+              <Stack width="100%" direction={"row"} spacing={2} height="15%" minHeight="15%" justifyContent={"center"} alignItems={"center"}>
                 <TextField id="outlined-basic" label="Type in Item's name" variant="outlined" value={itemData.name} sx={{width: "400px"}}
                 onChange={(e) => {
                 setItemData((prevState) => ({...prevState, name:e.target.value}))
@@ -415,15 +417,15 @@ export default function Tracker() {
             :
             (
               <Stack direction={"row"} width="100%" height="15%" alignItems={"center"} justifyContent={"center"} spacing={2}>
-                <Button variant="contained" onClick={() => setSwitches((prevState) => ({...prevState, showAddItem: true}))}><AddIcon />Add New Item</Button>
-                <Button variant="contained" onClick={() => setSwitches((prevState) => ({...prevState, find: true}))}><SearchIcon />Find Item</Button>
-                <Button variant="contained" onClick={() => setSwitches((prevState) => ({...prevState, signOut: true}))} sx={{position:"absolute", right:"2%"}}><LogoutIcon />Sign Out</Button>
+                <Button variant="contained" onClick={() => handleSwitchOpen("showAddItem")}><AddIcon />Add New Item</Button>
+                <Button variant="contained" onClick={() => handleSwitchOpen("find")}><SearchIcon />Find Item</Button>
+                <Button variant="contained" onClick={() => handleSwitchOpen("signOut")} sx={{position:"absolute", right:"2%"}}><LogoutIcon />Sign Out</Button>
               </Stack>
             )
             }
 
-        <Box width="100%" height="90%" border={'1px solid #333'} sx={{borderLeft: 0}}>
-            <Stack width="100%" height="100%" position={"relative"} spacing={2} overflow={'auto'} >
+        <Box width="100%" height="83.5%" border={'1px solid #333'} sx={{borderLeft: 0}}>
+            <Stack width="100%" height="100%" maxHeight="100%" position={"relative"} spacing={2} overflow={'auto'} >
               {pantry.map(({name,count,imageURL}) => (
                   <Box 
                     key={name}
@@ -458,10 +460,10 @@ export default function Tracker() {
                         {count}
                     </Typography>
                   <Stack direction="row" spacing={2}>
-                    <Button variant="contained" name="edit"
-                    onClick={(e) => {
+                    <Button variant="contained"
+                    onClick={async (e) => {
                       setItemData((prevState) => ({...prevState,name: name}))
-                      handleSwitchOpen(e)
+                      handleSwitchOpen("edit")
                     }}><CreateIcon />Edit</Button>
                     <Button variant="contained" color="error" name="delete"
                     onClick={() =>{
