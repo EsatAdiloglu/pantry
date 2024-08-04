@@ -28,17 +28,6 @@ const CameraComponent = () => {
             <Camera ref={cameraRef} />
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button
-            variant="contained"
-            onClick={() => {
-                console.log("Photo taken")
-                setCameraOpen(false)
-            }}
-          >
-            Take Photo
-          </Button>
-        </DialogActions>
       </Dialog>
     </Box>
   );
