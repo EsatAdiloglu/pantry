@@ -38,6 +38,3 @@ next-env.d.ts
 
 #environmental variables
 .env
-
-#backend
-backend/

@@ -1,8 +1,9 @@
 "use client"
 import {Box, Stack, Typography, Button, Modal, TextField, Card, CardMedia} from "@mui/material"
-import {firestore, app} from "@/firebase";
+import {firestore, app, storage} from "@/firebase";
 import {collection, doc, query, getDocs, setDoc, deleteDoc, getDoc} from 'firebase/firestore'
 import {getAuth, signOut, onAuthStateChanged} from "firebase/auth"
+import { ref, getDownloadURL, uploadBytes, deleteObject } from "firebase/storage";
 import {useRouter} from "next/navigation"
 import {useState, useEffect} from "react"
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -11,6 +12,7 @@ import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import RemoveIcon from '@mui/icons-material/Remove';
 import LogoutIcon from '@mui/icons-material/Logout';
+
 // import { userAgent } from "next/server";
 // import { unsubscribe } from "@/backend/api/collections";
 
@@ -34,8 +36,11 @@ const formatString = (str) => str.charAt(0).toUpperCase() + str.slice(1).toLower
 export default function Tracker() {
   const auth = getAuth();
   const router = useRouter();
-  const [user, setUser] = useState("")
-  const [loggedIn, setLoggedIn] = useState(false)
+  const [user, setUser] = useState({
+    data: "",
+    loggedIn: false
+    
+  })
   const [pantries, setPantries] = useState([])
   const [currentPantry, setCurrentPantry] = useState("")
   const [pantry,setPantry] = useState([]);
@@ -48,15 +53,16 @@ export default function Tracker() {
   });
   const [itemData, setItemData] = useState({
     name: '',
-    quantity: 1
+    quantity: 1,
+    imageFile: null
   });
   // const [pantryData, setPantryData] = useState("")
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        setUser(user);
-        if (!loggedIn) {
+        setUser((prevState) => ({...prevState, data: user}));;
+        if (!user.loggedIn) {
           try {
             const userRef = doc(collection(firestore, "users"), user.email);
             const docRef = doc(collection(userRef,"pantry"), "Donotremovethisdocument");
@@ -66,19 +72,19 @@ export default function Tracker() {
               await setDoc(docRef, { count: 0 });
             }
             await updatePantryList();
-            setLoggedIn(true);
+            setUser((prevState) => ({...prevState,loggedIn: true}));
           } catch (error) {
             console.error(error);
           }
         }
       } else {
+        setUser({data: "", loggedIn: false})
         router.push("/");
       }
     });
 
-    // Cleanup function
     return () => unsubscribe();
-  }, [auth, loggedIn, router]);
+  }, [auth, router]);
 
   useEffect(() => {
     updatePantry();
@@ -122,8 +128,8 @@ export default function Tracker() {
 
   const updatePantry = async () => {
     try{
-    if(currentPantry && user){
-      const userRef = doc(collection(firestore,"users"),user.email)
+    if(currentPantry && user.data){
+      const userRef = doc(collection(firestore,"users"),user.data.email)
       const snapshot = query(collection(userRef,currentPantry))
       const docs = await getDocs(snapshot)
       const pantryList = []
@@ -137,6 +143,7 @@ export default function Tracker() {
       console.error(error)
     }
   }
+
   // const addPantry = async (pantry) => {
   //   try{
   //     if(pantry.replace(/\s/g,"") !== ""){
@@ -153,48 +160,69 @@ export default function Tracker() {
 
   const addItem = async (item) => {
     try{
-      const userRef = doc(collection(firestore,"users"),user.email)
+      //Getting doc
+      const userRef = doc(collection(firestore,"users"),user.data.email)
       const docRef = doc(collection(userRef,currentPantry),formatString(item.name))
       const docSnap = await getDoc(docRef)
+
+      //Getting quantity
       const quantity = Number(item.quantity)
       if(quantity > 0 && item.name.replace(/\s/g,"") !== ""){
+
+      //Storing and getting image
+      let imageURL = null
+      if(itemData.imageFile){
+        const storageRef = ref(storage, `users/${user.data.email}/images/${itemData.imageFile.name}`)
+        await uploadBytes(storageRef,itemData.imageFile)
+        imageURL = await getDownloadURL(storageRef);
+      }
         if(docSnap.exists()){
           const {count} = docSnap.data()
-          await setDoc(docRef, {count: count + quantity})
+          await setDoc(docRef, {count: count + quantity},{merge: true})
         }
         else{
-        await setDoc(docRef, {count: quantity})
+        await setDoc(docRef, {count: quantity, imageURL: imageURL})
         }
       }
       await updatePantry()
     }
-  catch(error){
-    alert("Please type in an item.")
-    console.error(error)
-  }
-  }
-  const removeItem = async (name,quantity) => {
-    const userRef = doc(collection(firestore,"users"),user.email)
-    const docRef = doc(collection(userRef,currentPantry), name)
-    const docSnap = await getDoc(docRef)
-    quantity = Number(quantity)
-    if(!isNaN(quantity)){
-      if (docSnap.exists()){
-        const {count} = docSnap.data()
-        if (count - quantity < 1){
-          await deleteDoc(docRef)
-        }
-        else{
-          await setDoc(docRef, {count: count - quantity})
-        }
+    catch(error){
+      alert("Please type in an item.")
+      console.error(error)
     }
   }
-    await updatePantry()
+
+  const removeItem = async (name,quantity,image) => {
+    try{
+      const userRef = doc(collection(firestore,"users"),user.data.email)
+      const docRef = doc(collection(userRef,currentPantry), name)
+      const docSnap = await getDoc(docRef)
+      quantity = Number(quantity)
+      if(!isNaN(quantity)){
+        if (docSnap.exists()){
+          const {count} = docSnap.data()
+          if (count - quantity < 1){
+            if(image){
+              await deleteObject(ref(storage,image))
+            }
+            await deleteDoc(docRef)
+          }
+          else{
+            await setDoc(docRef, {count: count - quantity, imageURL: image})
+          }
+      }
+    }
+      await updatePantry()
+    }
+    catch(error){
+      console.error(error)
+    }
 }
+
   const findItem = async (item) => {
     try{
       if(item !== ""){
-        const userRef = doc(collection(firestore,"users"),user.email)
+        const userRef = doc(collection(firestore,"users"),user.data.email)
         const docRef = doc(collection(userRef,currentPantry),formatString(item))
         const docSnap = await getDoc(docRef)
           if(docSnap.exists()){
@@ -233,13 +261,13 @@ export default function Tracker() {
               <Button variant="outlined"
               onClick={(e) => {
                 addItem(itemData)
-                setItemData({name:"", quantity:1})
+                setItemData({name:"", quantity:1, imageFile: null})
                 handleSwitchClose("edit")
               }}><AddIcon />Add</Button>
               <Button variant="outlined"
               onClick={(e) => {
                 removeItem(itemData.name,itemData.quantity)
-                setItemData({name:"", quantity:1})
+                setItemData({name:"", quantity:1, imageFile: null})
                 handleSwitchClose("edit")
               }}><RemoveIcon />Remove</Button>
             </Stack>
@@ -314,8 +342,7 @@ export default function Tracker() {
               variant="outlined"
               sx={{height:"11vh", minHeight:"11vh", borderRadius: 0,textTransform: 'none', color:"black", borderColor:"black","&:hover":{borderColor:"black",color:"black",backgroundColor:"#e2e2e2"}}} 
               key={name}
-              onClick={async () => {
-
+              onClick={() => {
                 switchPantry(name)
                 updatePantry()}}>{name}</Button>
           ))} 
@@ -340,15 +367,24 @@ export default function Tracker() {
           <Stack width="100%"  direction={"row"} height="8.5%" justifyContent={"center"} alignItems={"center"} spacing={2}>
             <TextField id="outlined-basic" label="New Item" variant="outlined" value={itemData.name}  sx={{width: "400px"}} onChange={(e) => setItemData((prevState) => ({...prevState, name: e.target.value}))}/>
             <TextField id="outlined-basic" width="20%" type="number" label="Quantity" variant="outlined"  value={itemData.quantity}  inputProps={{ min: 1 }} sx={{width: "400px"}} onChange={(e) => setItemData((prevState) => ({...prevState, quantity: e.target.value}))}/>
+            <input type="file" accept="image/*" style={{display:"none"}} id="imageInput"
+            onChange={(e) => {
+              if(e.target.files[0]){
+                setItemData((prevState) => ({...prevState, imageFile: e.target.files[0]}))
+              }
+            }}/>
+            <label htmlFor="imageInput">
+              <Button variant="contained" component="span">Select Image</Button>
+            </label>
             <Button variant="contained" 
             onClick={() => {
               addItem(itemData)
-              setItemData({name:"",quantity:1})
+              setItemData({name:"",quantity:1, imageFile:null})
               setSwitches((prevState) => ({...prevState, showAddItem: false}))
             }}><AddIcon />Add</Button>
             <Button variant="contained"
             onClick={() => {
-              setItemData({name:"",quantity:1})
+              setItemData({name:"",quantity:1, imageFile:null})
               setSwitches((prevState) => ({...prevState, showAddItem: false}))
             }}>Cancel</Button>
           </Stack>
@@ -361,7 +397,7 @@ export default function Tracker() {
                 findItem(e.target.value)}}/>
                 <Button variant="contained"
                   onClick={async () => {
-                  setItemData({name:"",quantity:1})
+                  setItemData({name:"",quantity:1, imageFile:null})
                   await updatePantry()
                   setSwitches((prevState) => ({...prevState, find: false}))
                 }}>Cancel</Button>
@@ -379,7 +415,7 @@ export default function Tracker() {
 
         <Box width="100%" height="90%" border={'1px solid #333'} sx={{borderLeft: 0}}>
             <Stack width="100%" height="100%" position={"relative"} spacing={2} overflow={'auto'} >
-              {pantry.map(({name,count,image}) => (
+              {pantry.map(({name,count,imageURL}) => (
                   <Box 
                     key={name}
                     width="100%"
@@ -390,11 +426,11 @@ export default function Tracker() {
                     bgcolor={'#f0f0f0'}
                     paddingX={5}>
                     <Stack direction={"row"} justifyContent={"center"} alignItems={"center"} spacing={5}>
-                    {image ? (
+                    {imageURL ? (
                       <Card>
                         <CardMedia
                         component="img"
-                        image={image}
+                        image={imageURL}
                         alt="boxes"
                         sx={{height:"auto",maxWidth:"150px"}}
                         />
@@ -420,7 +456,7 @@ export default function Tracker() {
                     }}><CreateIcon />Edit</Button>
                     <Button variant="contained" color="error" name="delete"
                     onClick={() =>{
-                      removeItem(name,count)
+                      removeItem(name,count,imageURL)
                     }}><DeleteIcon />Remove</Button>
                   </Stack>
                 </Box>
