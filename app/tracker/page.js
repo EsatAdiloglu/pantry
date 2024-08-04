@@ -6,12 +6,14 @@ import {getAuth, signOut, onAuthStateChanged} from "firebase/auth"
 import { ref, getDownloadURL, uploadBytes, deleteObject } from "firebase/storage";
 import {useRouter} from "next/navigation"
 import {useState, useEffect} from "react"
+import CameraComponent from "../CameraComponent";
 import DeleteIcon from '@mui/icons-material/Delete';
 import CreateIcon from '@mui/icons-material/Create';
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import RemoveIcon from '@mui/icons-material/Remove';
 import LogoutIcon from '@mui/icons-material/Logout';
+import PhotoIcon from '@mui/icons-material/Photo';
 
 // import { userAgent } from "next/server";
 // import { unsubscribe } from "@/backend/api/collections";
@@ -71,7 +73,6 @@ export default function Tracker() {
             if (!docSnap.exists()) {
               await setDoc(docRef, { count: 0 });
             }
-            await updatePantryList();
             setUser((prevState) => ({...prevState,loggedIn: true}));
           } catch (error) {
             console.error(error);
@@ -86,6 +87,9 @@ export default function Tracker() {
     return () => unsubscribe();
   }, [auth, router]);
 
+  useEffect(() => {
+    updatePantryList()
+  }, [user])
   useEffect(() => {
     updatePantry();
   }, [currentPantry])
@@ -110,6 +114,7 @@ export default function Tracker() {
 
   const updatePantryList = async () => {
     try{
+      if(user.data){
       // const response = await fetch("http://localhost:8080/api/collections");
       // const data = await response.json();
       // const pantriesList = [];
@@ -118,11 +123,12 @@ export default function Tracker() {
       // });
       // setPantries(pantriesList)
       setPantries(["pantry"])
-      setCurrentPantry("pantry")
+      setCurrentPantry(pantries[0])
       await updatePantry()
     }
+    }
     catch(error){
-      console.error(error)
+      console.error("Uh oh:",error)
     }
   }
 
@@ -335,8 +341,8 @@ export default function Tracker() {
 
 
       <Box width="30%" height="100%"  display={"flex"} flexDirection={"column"} border={'1px solid #333'}>
-        <Typography variant={"h4"} color={"#333"} textAlign={"center"} align={"center"} sx={{lineHeight: 2.5, height:"9.9%"}}>Your Pantries</Typography>
-        <Stack width="23vw" height="85.2%" border={"1px solid #333"} direction={"column"} overflow={"auto"} sx={{boxSizing: 'border-box'}}>
+        <Typography variant={"h4"} color={"#333"} textAlign={"center"} align={"center"} sx={{lineHeight: 4.5, height:"15.7%"}}>Your Pantries</Typography>
+        <Stack width="23vw" height="79.5%" border={"1px solid #333"} direction={"column"} overflow={"auto"} sx={{boxSizing: 'border-box'}}>
           {pantries.map((name) => (
               <Button
               variant="outlined"
@@ -364,7 +370,8 @@ export default function Tracker() {
 
     
        {switches.showAddItem ? (
-          <Stack width="100%"  direction={"row"} height="8.5%" justifyContent={"center"} alignItems={"center"} spacing={2}>
+          <Stack width="100%"  direction={"column"} height="15%" justifyContent={"center"} alignItems={"center"} spacing={2}>
+            <Stack width="100%" direction={"row"} justifyContent={"center"} alignItems={"center"} spacing={2}>
             <TextField id="outlined-basic" label="New Item" variant="outlined" value={itemData.name}  sx={{width: "400px"}} onChange={(e) => setItemData((prevState) => ({...prevState, name: e.target.value}))}/>
             <TextField id="outlined-basic" width="20%" type="number" label="Quantity" variant="outlined"  value={itemData.quantity}  inputProps={{ min: 1 }} sx={{width: "400px"}} onChange={(e) => setItemData((prevState) => ({...prevState, quantity: e.target.value}))}/>
             <input type="file" accept="image/*" style={{display:"none"}} id="imageInput"
@@ -374,7 +381,7 @@ export default function Tracker() {
               }
             }}/>
             <label htmlFor="imageInput">
-              <Button variant="contained" component="span">Select Image</Button>
+              <Button variant="contained" component="span"><PhotoIcon />{itemData.imageFile ? "Image Selected" : "Select Image"}</Button>
             </label>
             <Button variant="contained" 
             onClick={() => {
@@ -387,10 +394,12 @@ export default function Tracker() {
               setItemData({name:"",quantity:1, imageFile:null})
               setSwitches((prevState) => ({...prevState, showAddItem: false}))
             }}>Cancel</Button>
+            </Stack>
+            <CameraComponent />
           </Stack>
             )
             : switches.find ? (
-              <Stack width="100%" direction={"row"} spacing={2} height="8.5%" justifyContent={"center"} alignItems={"center"}>
+              <Stack width="100%" direction={"row"} spacing={2} height="15%" justifyContent={"center"} alignItems={"center"}>
                 <TextField id="outlined-basic" label="Type in Item's name" variant="outlined" value={itemData.name} sx={{width: "400px"}}
                 onChange={(e) => {
                 setItemData((prevState) => ({...prevState, name:e.target.value}))
@@ -405,7 +414,7 @@ export default function Tracker() {
             )
             :
             (
-              <Stack direction={"row"} width="100%" height="8.5%" alignItems={"center"} justifyContent={"center"} spacing={2}>
+              <Stack direction={"row"} width="100%" height="15%" alignItems={"center"} justifyContent={"center"} spacing={2}>
                 <Button variant="contained" onClick={() => setSwitches((prevState) => ({...prevState, showAddItem: true}))}><AddIcon />Add New Item</Button>
                 <Button variant="contained" onClick={() => setSwitches((prevState) => ({...prevState, find: true}))}><SearchIcon />Find Item</Button>
                 <Button variant="contained" onClick={() => setSwitches((prevState) => ({...prevState, signOut: true}))} sx={{position:"absolute", right:"2%"}}><LogoutIcon />Sign Out</Button>
