@@ -214,7 +214,7 @@ export default function Tracker() {
             await deleteDoc(docRef)
           }
           else{
-            await setDoc(docRef, {count: count - quantity, imageURL: image})
+            await setDoc(docRef, {count: count - quantity},{merge: true})
           }
       }
     }
@@ -272,7 +272,7 @@ export default function Tracker() {
               }}><AddIcon />Add</Button>
               <Button variant="outlined"
               onClick={(e) => {
-                removeItem(itemData.name,itemData.quantity)
+                removeItem(itemData.name,itemData.quantity, itemData.imageFile)
                 setItemData({name:"", quantity:1, imageFile: null})
                 handleSwitchClose("edit")
               }}><RemoveIcon />Remove</Button>
