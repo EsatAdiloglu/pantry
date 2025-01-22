@@ -66,7 +66,7 @@ export default function Tracker() {
         setUser((prevState) => ({...prevState, data: user}));;
         if (!user.loggedIn) {
           try {
-            const userRef = doc(collection(firestore, "users"), user.email);
+            const userRef = doc(collection(firestore, "users"), user.uid);
             const docRef = doc(collection(userRef,"pantry"), "Donotremovethisdocument");
             const docSnap = await getDoc(docRef);
 
@@ -136,7 +136,7 @@ export default function Tracker() {
   const updatePantry = async () => {
     try{
     if(currentPantry && user.data){
-      const userRef = doc(collection(firestore,"users"),user.data.email)
+      const userRef = doc(collection(firestore,"users"),user.data.uid)
       const snapshot = query(collection(userRef,currentPantry))
       const docs = await getDocs(snapshot)
       const pantryList = []
@@ -154,7 +154,7 @@ export default function Tracker() {
   // const addPantry = async (pantry) => {
   //   try{
   //     if(pantry.replace(/\s/g,"") !== ""){
-  //       const userRef = doc(collection(firestore,"users"),user.email)
+  //       const userRef = doc(collection(firestore,"users"),user.uid)
   //       const docRef = doc(collection(userRef,pantry),"Don't remove so that collection exist")
   //       await setDoc(docRef, {count: 0})  //So that the collection can appear. If the document field is empty, then it won't appear
   //       await updatePantryList()
@@ -168,18 +168,18 @@ export default function Tracker() {
   const addItem = async (item) => {
     try{
       //Getting doc
-      const userRef = doc(collection(firestore,"users"),user.data.email)
+      const userRef = doc(collection(firestore,"users"),user.data.uid)
       const docRef = doc(collection(userRef,currentPantry),formatString(item.name))
       const docSnap = await getDoc(docRef)
 
       //Getting quantity
       const quantity = Number(item.quantity)
-      if(quantity > 0 && item.name.replace(/\s/g,"") !== ""){
+      if(quantity > 0 && item.trim()){
 
       //Storing and getting image
       let imageURL = null
       if(itemData.imageFile){
-        const storageRef = ref(storage, `users/${user.data.email}/images/${itemData.imageFile.name}`)
+        const storageRef = ref(storage, `users/${user.data.uid}/images/${itemData.imageFile.name}`)
         await uploadBytes(storageRef,itemData.imageFile)
         imageURL = await getDownloadURL(storageRef);
       }
@@ -201,7 +201,7 @@ export default function Tracker() {
 
   const removeItem = async (name,quantity,image) => {
     try{
-      const userRef = doc(collection(firestore,"users"),user.data.email)
+      const userRef = doc(collection(firestore,"users"),user.data.uid)
       const docRef = doc(collection(userRef,currentPantry), name)
       const docSnap = await getDoc(docRef)
       quantity = Number(quantity)
@@ -229,7 +229,7 @@ export default function Tracker() {
   const findItem = async (item) => {
     try{
       if(item !== ""){
-        const userRef = doc(collection(firestore,"users"),user.data.email)
+        const userRef = doc(collection(firestore,"users"),user.data.uid)
         const docRef = doc(collection(userRef,currentPantry),formatString(item))
         const docSnap = await getDoc(docRef)
           if(docSnap.exists()){
@@ -387,6 +387,7 @@ export default function Tracker() {
             </label>
             <Button variant="contained" 
             onClick={() => {
+              console.log("Hello" + itemData)
               addItem(itemData)
               setItemData({name:"",quantity:1, imageFile:null})
               setSwitches((prevState) => ({...prevState, showAddItem: false}))
